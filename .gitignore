@@ -1,0 +1,30 @@
+# Gradle
+.gradle/
+build/
+app/build/
+
+# Android Studio
+.idea/
+*.iml
+
+# Local config
+local.properties
+
+# APK/AAB
+*.apk
+*.aab
+
+# Logs
+*.log
+
+# Crash/memory dump
+*.hprof
+java_pid*.hprof
+
+# Native build
+.externalNativeBuild/
+.cxx/
+
+# OS
+.DS_Store
+Thumbs.db
