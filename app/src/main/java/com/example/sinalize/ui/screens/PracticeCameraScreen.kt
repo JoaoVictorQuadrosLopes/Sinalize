@@ -11,7 +11,11 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,6 +35,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -100,73 +106,76 @@ fun PracticeCameraScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(20.dp)
+            .padding(16.dp)
     ) {
         OutlinedButton(onClick = onBackClick) {
             Text(text = "Voltar")
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
-        Text(text = "Pratique o sinal: ${lesson?.title ?: ""}")
+        Text(
+            text = "Pratique o sinal: ${lesson?.title ?: ""}",
+            style = MaterialTheme.typography.titleLarge
+        )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
-        if (imageResId != 0) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                elevation = CardDefaults.cardElevation(4.dp)
-            ) {
-                Image(
-                    painter = painterResource(id = imageResId),
-                    contentDescription = "Modelo do gesto",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(130.dp)
-                        .padding(12.dp),
-                    contentScale = ContentScale.Fit
-                )
-            }
+        ReferenceGestureCard(
+            imageResId = imageResId,
+            lessonTitle = lesson?.title ?: "Gesto",
+            movementTip = lesson?.movementTip ?: "Observe a imagem e repita o movimento."
+        )
 
-            Spacer(modifier = Modifier.height(12.dp))
-        }
+        Spacer(modifier = Modifier.height(10.dp))
 
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(18.dp),
-            elevation = CardDefaults.cardElevation(4.dp)
+            elevation = CardDefaults.cardElevation(4.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = if (isGestureCorrect) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant
+                }
+            )
         ) {
             Column(
-                modifier = Modifier.padding(16.dp)
+                modifier = Modifier.padding(14.dp)
             ) {
-                Text(text = feedback)
+                Text(
+                    text = feedback,
+                    style = MaterialTheme.typography.bodyLarge
+                )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
                 Text(
                     text = if (isGestureCorrect) {
                         "Gesto confirmado. Você pode seguir para o quiz."
                     } else {
                         "Segure o gesto correto por alguns segundos para liberar."
-                    }
+                    },
+                    style = MaterialTheme.typography.bodyMedium
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
-                    text = "Confirmação: $correctFrameCount/12"
+                    text = "Confirmação: $correctFrameCount/12",
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         if (hasCameraPermission) {
             CameraPreviewWithHandDetection(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(420.dp),
+                    .height(360.dp),
                 expectedGesture = expectedGesture,
                 onFeedbackChanged = { newFeedback, correct ->
                     feedback = newFeedback
@@ -195,7 +204,7 @@ fun PracticeCameraScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         Button(
             onClick = onFinishClick,
@@ -209,6 +218,81 @@ fun PracticeCameraScreen(
                     "Faça o gesto correto para liberar"
                 }
             )
+        }
+    }
+}
+
+@Composable
+fun ReferenceGestureCard(
+    imageResId: Int,
+    lessonTitle: String,
+    movementTip: String
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        elevation = CardDefaults.cardElevation(5.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .height(120.dp)
+                    .weight(1f)
+                    .background(
+                        color = MaterialTheme.colorScheme.surface,
+                        shape = RoundedCornerShape(14.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                if (imageResId != 0) {
+                    Image(
+                        painter = painterResource(id = imageResId),
+                        contentDescription = "Imagem de referência do sinal $lessonTitle",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(110.dp)
+                            .padding(8.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                } else {
+                    Text(
+                        text = "Sem imagem",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = "Gesto esperado",
+                    style = MaterialTheme.typography.labelLarge
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = lessonTitle,
+                    style = MaterialTheme.typography.titleMedium
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = movementTip,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
         }
     }
 }
