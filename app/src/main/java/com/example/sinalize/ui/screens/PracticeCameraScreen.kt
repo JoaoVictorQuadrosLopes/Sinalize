@@ -58,6 +58,10 @@ fun PracticeCameraScreen(
         mutableStateOf(false)
     }
 
+    var correctFrameCount by remember {
+        mutableStateOf(0)
+    }
+
     var hasCameraPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(
@@ -133,10 +137,27 @@ fun PracticeCameraScreen(
             shape = RoundedCornerShape(18.dp),
             elevation = CardDefaults.cardElevation(4.dp)
         ) {
-            Text(
-                text = feedback,
+            Column(
                 modifier = Modifier.padding(16.dp)
-            )
+            ) {
+                Text(text = feedback)
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = if (isGestureCorrect) {
+                        "Gesto confirmado. Você pode seguir para o quiz."
+                    } else {
+                        "Segure o gesto correto por alguns segundos para liberar."
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = "Confirmação: $correctFrameCount/12"
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -149,7 +170,14 @@ fun PracticeCameraScreen(
                 expectedGesture = expectedGesture,
                 onFeedbackChanged = { newFeedback, correct ->
                     feedback = newFeedback
-                    isGestureCorrect = correct
+
+                    if (correct) {
+                        correctFrameCount++
+                    } else {
+                        correctFrameCount = 0
+                    }
+
+                    isGestureCorrect = correctFrameCount >= 12
                 }
             )
         } else {

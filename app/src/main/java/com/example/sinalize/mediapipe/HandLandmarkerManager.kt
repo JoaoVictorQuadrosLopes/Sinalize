@@ -34,9 +34,9 @@ class HandLandmarkerManager(
             .setBaseOptions(baseOptions)
             .setRunningMode(RunningMode.LIVE_STREAM)
             .setNumHands(1)
-            .setMinHandDetectionConfidence(0.6f)
-            .setMinHandPresenceConfidence(0.6f)
-            .setMinTrackingConfidence(0.6f)
+            .setMinHandDetectionConfidence(0.7f)
+            .setMinHandPresenceConfidence(0.7f)
+            .setMinTrackingConfidence(0.7f)
             .setResultListener { result, _ ->
                 val analysis = analyzeGesture(result)
                 onFeedback(analysis.message, analysis.isCorrect)
@@ -135,7 +135,11 @@ class HandLandmarkerManager(
             for (col in 0 until width / 2) {
                 val vuIndex = row * chromaRowStride + col * chromaPixelStride
 
-                if (vuIndex < vBytes.size && vuIndex < uBytes.size && offset + 1 < nv21.size) {
+                if (
+                    vuIndex < vBytes.size &&
+                    vuIndex < uBytes.size &&
+                    offset + 1 < nv21.size
+                ) {
                     nv21[offset++] = vBytes[vuIndex]
                     nv21[offset++] = uBytes[vuIndex]
                 }
@@ -165,11 +169,24 @@ class HandLandmarkerManager(
         return when (expectedGesture) {
             "numero_1" -> analyzeNumberOne(hand)
             "numero_2" -> analyzeNumberTwo(hand)
+            "numero_5" -> analyzeNumberFive(hand)
             "letra_a" -> analyzeLetterA(hand)
             "letra_b" -> analyzeLetterB(hand)
-            "ola" -> analyzeOpenHand(hand, "Mão aberta detectada! Pode seguir para o quiz.")
-            "bom_dia" -> analyzeOpenHand(hand, "Mão aberta detectada! Pode seguir para o quiz.")
-            "obrigado" -> analyzeOpenHand(hand, "Mão aberta detectada! Pode seguir para o quiz.")
+
+            "ola" -> analyzeOpenHand(
+                hand,
+                "Mão aberta detectada! Segure o gesto para liberar o quiz."
+            )
+
+            "bom_dia" -> analyzeOpenHand(
+                hand,
+                "Mão aberta detectada! Segure o gesto para liberar o quiz."
+            )
+
+            "obrigado" -> analyzeOpenHand(
+                hand,
+                "Mão aberta detectada! Segure o gesto para liberar o quiz."
+            )
 
             else -> GestureAnalysis(
                 message = "Gesto detectado. Para esta aula, a validação automática ainda é simples.",
@@ -180,21 +197,48 @@ class HandLandmarkerManager(
 
     private fun analyzeNumberOne(hand: List<NormalizedLandmark>): GestureAnalysis {
         val indexOpen = isFingerOpen(hand, 8, 6)
+
         val middleClosed = isFingerClosed(hand, 12, 10)
         val ringClosed = isFingerClosed(hand, 16, 14)
         val pinkyClosed = isFingerClosed(hand, 20, 18)
 
+        val middleOpen = isFingerOpen(hand, 12, 10)
+        val ringOpen = isFingerOpen(hand, 16, 14)
+        val pinkyOpen = isFingerOpen(hand, 20, 18)
+
+        val indexTip = hand[8]
+        val middleTip = hand[12]
+        val ringTip = hand[16]
+        val pinkyTip = hand[20]
+
+        val indexClearlyHighest =
+            indexTip.y() < middleTip.y() - 0.04f &&
+                    indexTip.y() < ringTip.y() - 0.04f &&
+                    indexTip.y() < pinkyTip.y() - 0.04f
+
         return when {
-            indexOpen && middleClosed && ringClosed && pinkyClosed -> {
+            indexOpen &&
+                    middleClosed &&
+                    ringClosed &&
+                    pinkyClosed &&
+                    indexClearlyHighest -> {
                 GestureAnalysis("Correto! Esse parece o sinal do número 1.", true)
             }
 
             !indexOpen -> {
-                GestureAnalysis("Levante apenas o dedo indicador.", false)
+                GestureAnalysis("Levante bem apenas o dedo indicador.", false)
+            }
+
+            middleOpen || ringOpen || pinkyOpen -> {
+                GestureAnalysis("Feche bem os outros dedos. Deixe só o indicador levantado.", false)
+            }
+
+            !indexClearlyHighest -> {
+                GestureAnalysis("Levante mais o indicador para destacar o número 1.", false)
             }
 
             else -> {
-                GestureAnalysis("Feche os outros dedos e deixe só o indicador levantado.", false)
+                GestureAnalysis("Ajuste a mão para formar melhor o número 1.", false)
             }
         }
     }
@@ -202,20 +246,71 @@ class HandLandmarkerManager(
     private fun analyzeNumberTwo(hand: List<NormalizedLandmark>): GestureAnalysis {
         val indexOpen = isFingerOpen(hand, 8, 6)
         val middleOpen = isFingerOpen(hand, 12, 10)
+
         val ringClosed = isFingerClosed(hand, 16, 14)
         val pinkyClosed = isFingerClosed(hand, 20, 18)
 
+        val ringOpen = isFingerOpen(hand, 16, 14)
+        val pinkyOpen = isFingerOpen(hand, 20, 18)
+
+        val indexTip = hand[8]
+        val middleTip = hand[12]
+        val ringTip = hand[16]
+        val pinkyTip = hand[20]
+
+        val indexAndMiddleClearlyHighest =
+            indexTip.y() < ringTip.y() - 0.04f &&
+                    indexTip.y() < pinkyTip.y() - 0.04f &&
+                    middleTip.y() < ringTip.y() - 0.04f &&
+                    middleTip.y() < pinkyTip.y() - 0.04f
+
         return when {
-            indexOpen && middleOpen && ringClosed && pinkyClosed -> {
+            indexOpen &&
+                    middleOpen &&
+                    ringClosed &&
+                    pinkyClosed &&
+                    indexAndMiddleClearlyHighest -> {
                 GestureAnalysis("Correto! Esse parece o sinal do número 2.", true)
             }
 
             !indexOpen || !middleOpen -> {
-                GestureAnalysis("Levante o indicador e o dedo médio.", false)
+                GestureAnalysis("Levante bem o indicador e o dedo médio.", false)
+            }
+
+            ringOpen || pinkyOpen -> {
+                GestureAnalysis("Feche o anelar e o mindinho.", false)
             }
 
             else -> {
-                GestureAnalysis("Feche o anelar e o mindinho.", false)
+                GestureAnalysis("Ajuste os dedos para formar melhor o número 2.", false)
+            }
+        }
+    }
+
+    private fun analyzeNumberFive(hand: List<NormalizedLandmark>): GestureAnalysis {
+        val indexOpen = isFingerOpen(hand, 8, 6)
+        val middleOpen = isFingerOpen(hand, 12, 10)
+        val ringOpen = isFingerOpen(hand, 16, 14)
+        val pinkyOpen = isFingerOpen(hand, 20, 18)
+
+        val fingersOpen = indexOpen && middleOpen && ringOpen && pinkyOpen
+        val fingersSpread = areFingersSpread(hand)
+
+        return when {
+            fingersOpen && fingersSpread -> {
+                GestureAnalysis("Correto! Esse parece o sinal do número 5.", true)
+            }
+
+            !fingersOpen -> {
+                GestureAnalysis("Abra todos os dedos para formar o número 5.", false)
+            }
+
+            !fingersSpread -> {
+                GestureAnalysis("Separe melhor os dedos para formar o número 5.", false)
+            }
+
+            else -> {
+                GestureAnalysis("Ajuste a mão para formar melhor o número 5.", false)
             }
         }
     }
@@ -226,10 +321,12 @@ class HandLandmarkerManager(
         val ringClosed = isFingerClosed(hand, 16, 14)
         val pinkyClosed = isFingerClosed(hand, 20, 18)
 
-        return if (indexClosed && middleClosed && ringClosed && pinkyClosed) {
+        val allClosed = indexClosed && middleClosed && ringClosed && pinkyClosed
+
+        return if (allClosed) {
             GestureAnalysis("Correto! Esse parece a letra A.", true)
         } else {
-            GestureAnalysis("Feche a mão para formar a letra A.", false)
+            GestureAnalysis("Feche bem a mão para formar a letra A.", false)
         }
     }
 
@@ -239,10 +336,25 @@ class HandLandmarkerManager(
         val ringOpen = isFingerOpen(hand, 16, 14)
         val pinkyOpen = isFingerOpen(hand, 20, 18)
 
-        return if (indexOpen && middleOpen && ringOpen && pinkyOpen) {
-            GestureAnalysis("Correto! Esse parece a letra B.", true)
-        } else {
-            GestureAnalysis("Abra os dedos e mantenha a mão estendida para formar a letra B.", false)
+        val fingersOpen = indexOpen && middleOpen && ringOpen && pinkyOpen
+        val fingersTogether = areFingersTogether(hand)
+
+        return when {
+            fingersOpen && fingersTogether -> {
+                GestureAnalysis("Correto! Esse parece a letra B.", true)
+            }
+
+            !fingersOpen -> {
+                GestureAnalysis("Abra todos os dedos para formar a letra B.", false)
+            }
+
+            !fingersTogether -> {
+                GestureAnalysis("Deixe os dedos mais juntos para formar a letra B.", false)
+            }
+
+            else -> {
+                GestureAnalysis("Ajuste a mão para formar melhor a letra B.", false)
+            }
         }
     }
 
@@ -255,10 +367,12 @@ class HandLandmarkerManager(
         val ringOpen = isFingerOpen(hand, 16, 14)
         val pinkyOpen = isFingerOpen(hand, 20, 18)
 
-        return if (indexOpen && middleOpen && ringOpen && pinkyOpen) {
+        val fingersOpen = indexOpen && middleOpen && ringOpen && pinkyOpen
+
+        return if (fingersOpen) {
             GestureAnalysis(successMessage, true)
         } else {
-            GestureAnalysis("Abra a mão para praticar este sinal.", false)
+            GestureAnalysis("Abra bem a mão para praticar este sinal.", false)
         }
     }
 
@@ -270,7 +384,9 @@ class HandLandmarkerManager(
         val tip = landmarks[tipIndex]
         val pip = landmarks[pipIndex]
 
-        return tip.y() < pip.y()
+        val margin = 0.055f
+
+        return tip.y() < pip.y() - margin
     }
 
     private fun isFingerClosed(
@@ -281,7 +397,39 @@ class HandLandmarkerManager(
         val tip = landmarks[tipIndex]
         val pip = landmarks[pipIndex]
 
-        return tip.y() > pip.y()
+        val margin = 0.025f
+
+        return tip.y() > pip.y() + margin
+    }
+
+    private fun areFingersTogether(hand: List<NormalizedLandmark>): Boolean {
+        val indexTip = hand[8]
+        val middleTip = hand[12]
+        val ringTip = hand[16]
+        val pinkyTip = hand[20]
+
+        val indexMiddleDistance = kotlin.math.abs(indexTip.x() - middleTip.x())
+        val middleRingDistance = kotlin.math.abs(middleTip.x() - ringTip.x())
+        val ringPinkyDistance = kotlin.math.abs(ringTip.x() - pinkyTip.x())
+
+        return indexMiddleDistance < 0.09f &&
+                middleRingDistance < 0.09f &&
+                ringPinkyDistance < 0.09f
+    }
+
+    private fun areFingersSpread(hand: List<NormalizedLandmark>): Boolean {
+        val indexTip = hand[8]
+        val middleTip = hand[12]
+        val ringTip = hand[16]
+        val pinkyTip = hand[20]
+
+        val indexMiddleDistance = kotlin.math.abs(indexTip.x() - middleTip.x())
+        val middleRingDistance = kotlin.math.abs(middleTip.x() - ringTip.x())
+        val ringPinkyDistance = kotlin.math.abs(ringTip.x() - pinkyTip.x())
+
+        return indexMiddleDistance > 0.025f &&
+                middleRingDistance > 0.025f &&
+                ringPinkyDistance > 0.025f
     }
 
     fun close() {
